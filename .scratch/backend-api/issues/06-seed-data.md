@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 (create and read a book) — the schema and database path must exist. The pre-borrowed book is asserted on raw database state, so the return endpoint is not required.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Running the seed against an empty database inserts exactly 10 books across Fiction, Science, and History.
-- [ ] Exactly one seeded book has `is_borrowed = 1` with a non-null `borrower_name` (verified on database state).
-- [ ] One seeded book has the default "Uncategorized" category.
-- [ ] Running the seed again on a populated catalog inserts nothing (idempotent).
-- [ ] The `--reset` flag deletes existing books before inserting the sample set.
-- [ ] `pytest` verifies seeding, idempotency, and reset against an isolated temporary database.
+- [x] Running the seed against an empty database inserts exactly 10 books across Fiction, Science, and History.
+- [x] Exactly one seeded book has `is_borrowed = 1` with a non-null `borrower_name` (verified on database state).
+- [x] One seeded book has the default "Uncategorized" category.
+- [x] Running the seed again on a populated catalog inserts nothing (idempotent).
+- [x] The `--reset` flag deletes existing books before inserting the sample set.
+- [x] `pytest` verifies seeding, idempotency, and reset against an isolated temporary database.
