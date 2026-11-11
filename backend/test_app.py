@@ -232,3 +232,149 @@ def test_get_unknown_book_returns_json_404(client):
     assert response.is_json
     assert "error" in response.get_json()
 
+
+def test_update_book_success(client):
+    created = client.post(
+        "/api/books",
+        json={
+            "title": "Old Title",
+            "author": "Old Author",
+            "category": "Fiction",
+            "published_year": 1990,
+        },
+    ).get_json()
+
+    response = client.put(
+        f"/api/books/{created['id']}",
+        json={
+            "title": "New Title",
+            "author": "New Author",
+            "category": "History",
+            "published_year": 2005,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.is_json
+    updated = response.get_json()
+    assert updated["id"] == created["id"]
+    assert updated["title"] == "New Title"
+    assert updated["author"] == "New Author"
+    assert updated["category"] == "History"
+    assert updated["published_year"] == 2005
+    assert updated["created_at"] == created["created_at"]
+
+    fetched = client.get(f"/api/books/{created['id']}")
+    assert fetched.status_code == 200
+    assert fetched.get_json() == updated
+
+
+def test_update_book_invalid_input(client):
+    created = client.post(
+        "/api/books",
+        json={
+            "title": "Untouched",
+            "author": "Original",
+            "category": "Fiction",
+            "published_year": 1990,
+        },
+    ).get_json()
+
+    invalid_payloads = [
+        {"author": "A", "published_year": 2000},
+        {"title": "", "author": "A", "published_year": 2000},
+        {"title": "T", "published_year": 2000},
+        {"title": "T", "author": "", "published_year": 2000},
+        {"title": "T", "author": "A", "published_year": 1899},
+        {"title": "T", "author": "A", "published_year": 2027},
+        {"title": "T", "author": "A", "published_year": "not-a-year"},
+        {"title": "T", "author": "A", "published_year": 2000.5},
+    ]
+
+    for payload in invalid_payloads:
+        response = client.put(f"/api/books/{created['id']}", json=payload)
+
+        assert response.status_code == 400, payload
+        assert response.is_json
+        assert "error" in response.get_json()
+
+    fetched = client.get(f"/api/books/{created['id']}").get_json()
+    assert fetched == created
+
+
+def test_update_book_preserves_created_at_and_loan_fields(client):
+    created = client.post(
+        "/api/books",
+        json={
+            "title": "Borrowed Book",
+            "author": "A. Writer",
+            "category": "Fiction",
+            "published_year": 2001,
+        },
+    ).get_json()
+
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE books SET is_borrowed = 1, borrower_name = ? WHERE id = ?",
+            ("Jane Doe", created["id"]),
+        )
+
+    response = client.put(
+        f"/api/books/{created['id']}",
+        json={
+            "title": "Borrowed Book",
+            "author": "A. Writer",
+            "category": "Science",
+            "published_year": 2002,
+        },
+    )
+
+    assert response.status_code == 200
+    updated = response.get_json()
+    assert updated["created_at"] == created["created_at"]
+    assert updated["is_borrowed"] == 1
+    assert updated["borrower_name"] == "Jane Doe"
+
+
+def test_update_unknown_book_returns_json_404(client):
+    response = client.put(
+        "/api/books/9999",
+        json={
+            "title": "Ghost",
+            "author": "Nobody",
+            "category": "Fiction",
+            "published_year": 2000,
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert "error" in response.get_json()
+
+
+def test_update_book_malformed_body_returns_json_400(client):
+    created = client.post(
+        "/api/books",
+        json={"title": "Dune", "author": "Frank Herbert", "published_year": 1965},
+    ).get_json()
+
+    responses = [
+        client.put(
+            f"/api/books/{created['id']}",
+            data="not json",
+            content_type="text/plain",
+        ),
+        client.put(f"/api/books/{created['id']}", json=[1, 2, 3]),
+        client.put(
+            f"/api/books/{created['id']}",
+            data="{bad json",
+            content_type="application/json",
+        ),
+    ]
+
+    for response in responses:
+        assert response.status_code == 400
+        assert response.is_json
+        assert "error" in response.get_json()
+
+

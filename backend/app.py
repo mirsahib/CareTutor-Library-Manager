@@ -83,6 +83,47 @@ def create_app():
 
         return jsonify(dict(row)), 200
 
+    @app.route("/api/books/<int:book_id>", methods=["PUT"])
+    def update_book(book_id):
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Request body must be a JSON object"}), 400
+
+        try:
+            book_data = cast(
+                dict[str, Any], BookSchema(unknown=EXCLUDE).load(payload)
+            )
+        except ValidationError as error:
+            return jsonify({"error": format_validation_error(error)}), 400
+
+        with get_connection() as conn:
+            existing = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+            if existing is None:
+                return jsonify({"error": "Book not found"}), 404
+
+            conn.execute(
+                """
+                UPDATE books
+                SET title = ?, author = ?, category = ?, published_year = ?
+                WHERE id = ?
+                """,
+                (
+                    book_data["title"],
+                    book_data["author"],
+                    book_data["category"],
+                    book_data["published_year"],
+                    book_id,
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+        return jsonify(dict(row)), 200
+
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
         return jsonify({"error": error.description}), error.code
