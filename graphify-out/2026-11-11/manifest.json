@@ -1,0 +1,56 @@
+{
+  "backend/app.py": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.7812605,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/database.py": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.7812717,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/seed.py": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.7812772,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "backend/test_app.py": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.7812808,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "docker-compose.yml": {
+    "mtime": 1794321991.0741954,
+    "seen": 1794324516.7812848,
+    "ast_hash": "90e2df898f676c16d4d111324e33297e",
+    "semantic_hash": "90e2df898f676c16d4d111324e33297e"
+  },
+  "frontend/app.js": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.781288,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "frontend/controllers/book-form.controller.js": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.781291,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "frontend/controllers/book-list.controller.js": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.7812939,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "frontend/services/book.service.js": {
+    "mtime": 1794321892.407339,
+    "seen": 1794324516.781296,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  }
+}

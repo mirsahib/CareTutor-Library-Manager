@@ -1,0 +1,9 @@
+/home/mirsahib/Desktop/2026/Library_Book_Manager/AGENTS.md
+/home/mirsahib/Desktop/2026/Library_Book_Manager/CONTEXT.md
+/home/mirsahib/Desktop/2026/Library_Book_Manager/README.md
+/home/mirsahib/Desktop/2026/Library_Book_Manager/SPEC.md
+/home/mirsahib/Desktop/2026/Library_Book_Manager/backend/requirements.txt
+/home/mirsahib/Desktop/2026/Library_Book_Manager/frontend/index.html
+/home/mirsahib/Desktop/2026/Library_Book_Manager/frontend/views/book-form.html
+/home/mirsahib/Desktop/2026/Library_Book_Manager/frontend/views/book-list.html
+/home/mirsahib/Desktop/2026/Library_Book_Manager/Software Engineer Assessment – Part 1 Home Task.pdf
