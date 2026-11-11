@@ -5,7 +5,9 @@ class BookSchema(Schema):
     title = fields.String(required=True, validate=validate.Length(min=1))
     author = fields.String(required=True, validate=validate.Length(min=1))
     category = fields.String()
-    published_year = fields.Integer(required=True, validate=validate.Range(min=1900, max=2026))
+    published_year = fields.Integer(
+        required=True, strict=True, validate=validate.Range(min=1900, max=2026)
+    )
     is_borrowed = fields.Boolean(dump_only=True)
     borrower_name = fields.String(dump_only=True)
     created_at = fields.DateTime(dump_only=True)

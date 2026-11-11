@@ -116,3 +116,119 @@ def test_seed_reset_replaces_existing_catalog(empty_db):
     books = fetch_all_books()
     assert len(books) == 10
     assert "Extra Book" not in [book["title"] for book in books]
+
+
+def test_add_book_success(client):
+    response = client.post(
+        "/api/books",
+        json={
+            "title": "The Pragmatic Programmer",
+            "author": "Andrew Hunt",
+            "category": "Technology",
+            "published_year": 1999,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.is_json
+    book = response.get_json()
+    assert isinstance(book["id"], int)
+    assert book["title"] == "The Pragmatic Programmer"
+    assert book["author"] == "Andrew Hunt"
+    assert book["category"] == "Technology"
+    assert book["published_year"] == 1999
+    assert book["is_borrowed"] == 0
+    assert book["borrower_name"] is None
+    assert book["created_at"]
+
+    fetched = client.get(f"/api/books/{book['id']}")
+    assert fetched.status_code == 200
+    assert fetched.get_json() == book
+
+
+def test_add_book_defaults_category_to_uncategorized(client):
+    response = client.post(
+        "/api/books",
+        json={"title": "Untitled", "author": "Anonymous", "published_year": 2020},
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["category"] == "Uncategorized"
+
+
+def test_add_book_invalid_input(client):
+    invalid_payloads = [
+        {"author": "A", "published_year": 2000},
+        {"title": "", "author": "A", "published_year": 2000},
+        {"title": "T", "published_year": 2000},
+        {"title": "T", "author": "", "published_year": 2000},
+        {"title": "T", "author": "A", "published_year": 1899},
+        {"title": "T", "author": "A", "published_year": 2027},
+        {"title": "T", "author": "A", "published_year": "not-a-year"},
+        {"title": "T", "author": "A", "published_year": 2000.5},
+    ]
+
+    for payload in invalid_payloads:
+        response = client.post("/api/books", json=payload)
+
+        assert response.status_code == 400, payload
+        assert response.is_json
+        assert "error" in response.get_json()
+
+    assert fetch_all_books() == []
+
+
+def test_add_book_ignores_client_supplied_server_fields(client):
+    response = client.post(
+        "/api/books",
+        json={
+            "title": "Server Wins",
+            "author": "Trust Me",
+            "category": "Fiction",
+            "published_year": 2010,
+            "is_borrowed": 1,
+            "borrower_name": "Mallory",
+            "created_at": "1999-01-01T00:00:00",
+        },
+    )
+
+    assert response.status_code == 201
+    book = response.get_json()
+    assert book["is_borrowed"] == 0
+    assert book["borrower_name"] is None
+    assert not book["created_at"].startswith("1999-01-01")
+
+
+def test_add_book_malformed_body_returns_json_400(client):
+    responses = [
+        client.post("/api/books", data="not json", content_type="text/plain"),
+        client.post("/api/books", json=[1, 2, 3]),
+        client.post("/api/books", data="{bad json", content_type="application/json"),
+    ]
+
+    for response in responses:
+        assert response.status_code == 400
+        assert response.is_json
+        assert "error" in response.get_json()
+
+
+def test_get_book_by_id_returns_200(client):
+    created = client.post(
+        "/api/books",
+        json={"title": "Dune", "author": "Frank Herbert", "published_year": 1965},
+    ).get_json()
+
+    response = client.get(f"/api/books/{created['id']}")
+
+    assert response.status_code == 200
+    assert response.is_json
+    assert response.get_json() == created
+
+
+def test_get_unknown_book_returns_json_404(client):
+    response = client.get("/api/books/9999")
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert "error" in response.get_json()
+
