@@ -179,6 +179,25 @@ def create_app():
 
         return jsonify(dict(row)), 200
 
+    @app.route("/api/books/<int:book_id>", methods=["DELETE"])
+    def delete_book(book_id):
+        with get_connection() as conn:
+            book = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+            if book is None:
+                return jsonify({"error": "Book not found"}), 404
+
+            if book["is_borrowed"]:
+                return jsonify(
+                    {"error": "Book is currently borrowed and cannot be deleted"}
+                ), 409
+
+            conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+
+        return "", 204
+
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
         return jsonify({"error": error.description}), error.code

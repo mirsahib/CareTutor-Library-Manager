@@ -529,3 +529,44 @@ def test_return_unknown_book_returns_json_404(client):
     assert "error" in response.get_json()
 
 
+def test_delete_book_success(client):
+    created = create_book(client)
+
+    response = client.delete(f"/api/books/{created['id']}")
+
+    assert response.status_code == 204
+    assert response.get_data() == b""
+
+    fetched = client.get(f"/api/books/{created['id']}")
+    assert fetched.status_code == 404
+    assert fetched.is_json
+    assert "error" in fetched.get_json()
+
+
+def test_delete_borrowed_book_conflict(client):
+    created = create_book(client)
+    borrowed = client.post(
+        f"/api/books/{created['id']}/borrow",
+        json={"borrower_name": "Jane Doe"},
+    ).get_json()
+
+    response = client.delete(f"/api/books/{created['id']}")
+
+    assert response.status_code == 409
+    assert response.is_json
+    assert "error" in response.get_json()
+
+    fetched = client.get(f"/api/books/{created['id']}")
+    assert fetched.status_code == 200
+    assert fetched.get_json() == borrowed
+
+
+def test_delete_unknown_book_returns_json_404(client):
+    response = client.delete("/api/books/9999")
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert "error" in response.get_json()
+
+
+
