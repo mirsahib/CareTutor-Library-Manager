@@ -89,3 +89,19 @@ def client():
         # Initialize isolated schema here
         yield client
 ```
+
+---
+
+## 5. Tool Usage Guidelines
+
+- **Read tool**: Always read entire files before editing. Never make edits without first reading the target file with the Read tool. Provide the absolute `filePath` when invoking.
+- **Edit tool**: Use exact string matching for edits. Include sufficient surrounding context to ensure uniqueness. Prefer in-place edits over rewriting whole files.
+- **Write tool**: Only write new files when explicitly required. If creating a new file, first check for existing similar files using Glob.
+- **Glob tool**: Use pattern matching to discover files by name. Prefer over `ls` or `find` for file discovery.
+- **Grep tool**: Use regex pattern searches to locate content across the codebase. Enables efficient searching without reading every file.
+- **Bash tool**: Use for terminal operations like git, npm, docker. Quote file paths with spaces. Use `workdir` to change directories instead of `cd`.
+- **Task agent**: Launch specialized subagents for complex multi-step tasks. Specify `subagent_type` (explore, general) for appropriate agent deployment.
+- **Context7**: Use for fetching up-to-date library documentation. Resolve library IDs before querying docs.
+- **Skill system**: Use `/graphify` for knowledge graph building, `/question` for structured queries, and other skills as appropriate for the task.
+
+These guidelines ensure efficient, accurate, and maintainable AI-assisted development.
