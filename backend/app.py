@@ -124,6 +124,61 @@ def create_app():
 
         return jsonify(dict(row)), 200
 
+    @app.route("/api/books/<int:book_id>/borrow", methods=["POST"])
+    def borrow_book(book_id):
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Request body must be a JSON object"}), 400
+
+        borrower_name = payload.get("borrower_name")
+        if not isinstance(borrower_name, str) or not borrower_name.strip():
+            return jsonify({"error": "borrower_name is required"}), 400
+        borrower_name = borrower_name.strip()
+
+        with get_connection() as conn:
+            book = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+            if book is None:
+                return jsonify({"error": "Book not found"}), 404
+
+            if book["is_borrowed"]:
+                return jsonify({"error": "Book is already borrowed"}), 409
+
+            conn.execute(
+                "UPDATE books SET is_borrowed = 1, borrower_name = ? WHERE id = ?",
+                (borrower_name, book_id),
+            )
+            row = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+        return jsonify(dict(row)), 200
+
+    @app.route("/api/books/<int:book_id>/return", methods=["POST"])
+    def return_book(book_id):
+        with get_connection() as conn:
+            book = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+            if book is None:
+                return jsonify({"error": "Book not found"}), 404
+
+            if not book["is_borrowed"]:
+                return jsonify({"error": "Book is not currently borrowed"}), 409
+
+            conn.execute(
+                "UPDATE books SET is_borrowed = 0, borrower_name = NULL WHERE id = ?",
+                (book_id,),
+            )
+            row = conn.execute(
+                "SELECT * FROM books WHERE id = ?", (book_id,)
+            ).fetchone()
+
+        return jsonify(dict(row)), 200
+
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
         return jsonify({"error": error.description}), error.code

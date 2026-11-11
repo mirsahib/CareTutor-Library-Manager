@@ -378,3 +378,154 @@ def test_update_book_malformed_body_returns_json_400(client):
         assert "error" in response.get_json()
 
 
+def create_book(client, **overrides):
+    payload = {
+        "title": "Borrowable Book",
+        "author": "A. Writer",
+        "category": "Fiction",
+        "published_year": 2001,
+    }
+    payload.update(overrides)
+    return client.post("/api/books", json=payload).get_json()
+
+
+def test_borrow_book_success(client):
+    created = create_book(client)
+
+    response = client.post(
+        f"/api/books/{created['id']}/borrow",
+        json={"borrower_name": "Jane Doe"},
+    )
+
+    assert response.status_code == 200
+    assert response.is_json
+    book = response.get_json()
+    assert book["id"] == created["id"]
+    assert book["is_borrowed"] == 1
+    assert book["borrower_name"] == "Jane Doe"
+    assert book["created_at"] == created["created_at"]
+
+    fetched = client.get(f"/api/books/{created['id']}")
+    assert fetched.get_json() == book
+
+
+def test_borrow_book_invalid_borrower_name(client):
+    created = create_book(client)
+    invalid_payloads = [
+        {},
+        {"borrower_name": ""},
+        {"borrower_name": "   "},
+        {"borrower_name": 123},
+        {"borrower_name": None},
+        {"borrower_name": ["Jane"]},
+    ]
+
+    for payload in invalid_payloads:
+        response = client.post(
+            f"/api/books/{created['id']}/borrow", json=payload
+        )
+
+        assert response.status_code == 400, payload
+        assert response.is_json
+        assert "error" in response.get_json()
+
+    fetched = client.get(f"/api/books/{created['id']}").get_json()
+    assert fetched == created
+
+
+def test_borrow_already_borrowed_conflict(client):
+    created = create_book(client)
+    client.post(
+        f"/api/books/{created['id']}/borrow",
+        json={"borrower_name": "Jane Doe"},
+    )
+
+    response = client.post(
+        f"/api/books/{created['id']}/borrow",
+        json={"borrower_name": "John Smith"},
+    )
+
+    assert response.status_code == 409
+    assert response.is_json
+    assert "error" in response.get_json()
+
+    fetched = client.get(f"/api/books/{created['id']}").get_json()
+    assert fetched["is_borrowed"] == 1
+    assert fetched["borrower_name"] == "Jane Doe"
+
+
+def test_borrow_unknown_book_returns_json_404(client):
+    response = client.post(
+        "/api/books/9999/borrow", json={"borrower_name": "Jane Doe"}
+    )
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert "error" in response.get_json()
+
+
+def test_borrow_malformed_body_returns_json_400(client):
+    created = create_book(client)
+
+    responses = [
+        client.post(
+            f"/api/books/{created['id']}/borrow",
+            data="not json",
+            content_type="text/plain",
+        ),
+        client.post(f"/api/books/{created['id']}/borrow", json=[1, 2, 3]),
+        client.post(
+            f"/api/books/{created['id']}/borrow",
+            data="{bad json",
+            content_type="application/json",
+        ),
+    ]
+
+    for response in responses:
+        assert response.status_code == 400
+        assert response.is_json
+        assert "error" in response.get_json()
+
+
+def test_return_book_success(client):
+    created = create_book(client)
+    client.post(
+        f"/api/books/{created['id']}/borrow",
+        json={"borrower_name": "Jane Doe"},
+    )
+
+    response = client.post(f"/api/books/{created['id']}/return")
+
+    assert response.status_code == 200
+    assert response.is_json
+    book = response.get_json()
+    assert book["id"] == created["id"]
+    assert book["is_borrowed"] == 0
+    assert book["borrower_name"] is None
+    assert book["created_at"] == created["created_at"]
+
+    fetched = client.get(f"/api/books/{created['id']}")
+    assert fetched.get_json() == book
+
+
+def test_return_book_not_borrowed_conflict(client):
+    created = create_book(client)
+
+    response = client.post(f"/api/books/{created['id']}/return")
+
+    assert response.status_code == 409
+    assert response.is_json
+    assert "error" in response.get_json()
+
+    fetched = client.get(f"/api/books/{created['id']}").get_json()
+    assert fetched == created
+
+
+def test_return_unknown_book_returns_json_404(client):
+    response = client.post("/api/books/9999/return")
+
+    assert response.status_code == 404
+    assert response.is_json
+    assert "error" in response.get_json()
+
+
