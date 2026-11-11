@@ -35,8 +35,31 @@ def create_app():
 
     @app.route("/api/books", methods=["GET"])
     def get_books():
+        search = (request.args.get("search") or "").strip()
+        category = (request.args.get("category") or "").strip()
+
+        clauses = []
+        params = []
+
+        if search:
+            clauses.append(
+                "(instr(lower(title), lower(?)) > 0"
+                " OR instr(lower(author), lower(?)) > 0)"
+            )
+            params.extend([search, search])
+
+        if category:
+            clauses.append("lower(category) = lower(?)")
+            params.append(category)
+
+        query = "SELECT * FROM books"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY title"
+
         with get_connection() as conn:
-            rows = conn.execute("SELECT * FROM books ORDER BY title").fetchall()
+            rows = conn.execute(query, params).fetchall()
+
         return jsonify([dict(row) for row in rows]), 200
 
     @app.route("/api/books", methods=["POST"])

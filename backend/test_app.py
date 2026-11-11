@@ -569,4 +569,121 @@ def test_delete_unknown_book_returns_json_404(client):
     assert "error" in response.get_json()
 
 
+@pytest.fixture
+def catalog(client):
+    books = [
+        {
+            "title": "The Great Gatsby",
+            "author": "F. Scott Fitzgerald",
+            "category": "Fiction",
+            "published_year": 1925,
+        },
+        {
+            "title": "1984",
+            "author": "George Orwell",
+            "category": "Fiction",
+            "published_year": 1949,
+        },
+        {
+            "title": "A Brief History of Time",
+            "author": "Stephen Hawking",
+            "category": "Science",
+            "published_year": 1988,
+        },
+        {
+            "title": "The Selfish Gene",
+            "author": "Richard Dawkins",
+            "category": "Science",
+            "published_year": 1976,
+        },
+        {
+            "title": "SPQR: A History of Ancient Rome",
+            "author": "Mary Beard",
+            "category": "History",
+            "published_year": 2015,
+        },
+    ]
+    return [create_book(client, **book) for book in books]
+
+
+def book_titles(response):
+    return [book["title"] for book in response.get_json()]
+
+
+def test_list_books_search_matches_title_or_author_case_insensitively(
+    client, catalog
+):
+    by_author = client.get("/api/books", query_string={"search": "ORWELL"})
+    assert by_author.status_code == 200
+    assert book_titles(by_author) == ["1984"]
+
+    by_title = client.get("/api/books", query_string={"search": "gatsby"})
+    assert by_title.status_code == 200
+    assert book_titles(by_title) == ["The Great Gatsby"]
+
+    partial = client.get("/api/books", query_string={"search": "history"})
+    assert partial.status_code == 200
+    assert book_titles(partial) == [
+        "A Brief History of Time",
+        "SPQR: A History of Ancient Rome",
+    ]
+
+
+def test_list_books_category_filter_is_case_insensitive_exact(client, catalog):
+    science = client.get("/api/books", query_string={"category": "SCIENCE"})
+    assert science.status_code == 200
+    assert book_titles(science) == ["A Brief History of Time", "The Selfish Gene"]
+
+    fiction = client.get("/api/books", query_string={"category": "Fiction"})
+    assert fiction.status_code == 200
+    assert book_titles(fiction) == ["1984", "The Great Gatsby"]
+
+    partial = client.get("/api/books", query_string={"category": "Sci"})
+    assert partial.status_code == 200
+    assert partial.get_json() == []
+
+
+def test_list_books_search_and_category_combine_with_and(client, catalog):
+    response = client.get(
+        "/api/books",
+        query_string={"search": "THE", "category": "science"},
+    )
+
+    assert response.status_code == 200
+    assert book_titles(response) == ["The Selfish Gene"]
+
+    no_overlap = client.get(
+        "/api/books",
+        query_string={"search": "gatsby", "category": "Science"},
+    )
+    assert no_overlap.status_code == 200
+    assert no_overlap.get_json() == []
+
+
+def test_list_books_empty_params_return_all(client, catalog):
+    baseline = client.get("/api/books")
+    assert baseline.status_code == 200
+    assert len(baseline.get_json()) == len(catalog)
+
+    for params in (
+        {},
+        {"search": ""},
+        {"category": ""},
+        {"search": "", "category": ""},
+    ):
+        response = client.get("/api/books", query_string=params)
+
+        assert response.status_code == 200
+        assert response.get_json() == baseline.get_json()
+
+
+def test_list_books_search_with_no_match_returns_empty_array(client, catalog):
+    response = client.get("/api/books", query_string={"search": "zzzzz"})
+
+    assert response.status_code == 200
+    assert response.is_json
+    assert response.get_json() == []
+
+
+
 
