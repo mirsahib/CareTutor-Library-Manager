@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     networks:
       - default
-      - tsdproxy
+      - tsdproxy_default
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/')"]
       interval: 30s
@@ -30,6 +30,7 @@ services:
     restart: unless-stopped
     networks:
       - default
+      - tsdproxy_default
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/"]
       interval: 30s
