@@ -44,5 +44,5 @@ volumes:
   library_data:
 
 networks:
-  default:
+  coolify:
     external: true
