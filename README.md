@@ -123,6 +123,48 @@ docker compose up --build
 
 The frontend calls the API through its own origin (`/api/books`), and `frontend/nginx.conf` proxies those requests to `backend:5000`. The backend also publishes port `5000` for direct API access.
 
+## Database Seeding
+
+`backend/seed.py` inserts 10 sample books. It is idempotent by default: it inserts only when the `books` table is empty.
+
+```bash
+cd backend
+python seed.py            # seed only if the database is empty
+python seed.py --reset    # delete all books, then reseed
+```
+
+`app.py` calls `init_db()` on startup, which creates the schema but does **not** insert data — seeding is always an explicit step.
+
+### Seed a Docker Compose deployment
+
+The container writes to `DATABASE_PATH=/app/data/library.db`, backed by the `library_data` volume:
+
+```bash
+docker compose exec backend python seed.py
+docker compose exec backend python seed.py --reset
+```
+
+### Seed a Coolify deployment
+
+Use the Coolify terminal for the `backend` service, or run against the container from the host (the UUID prefix is stable across redeploys; the timestamp suffix changes):
+
+```bash
+docker exec -it $(docker ps -qf "name=backend-oiuze8xcseuyenlmlhhb4qbk") python seed.py
+docker exec -it $(docker ps -qf "name=backend-oiuze8xcseuyenlmlhhb4qbk") python seed.py --reset
+```
+
+### Automatic seeding on startup (optional)
+
+Because `seed()` is a no-op when rows already exist, it can safely run before Flask starts. Change the `CMD` in `backend/Dockerfile`:
+
+```dockerfile
+CMD ["sh", "-c", "python seed.py && python -m flask run --host=0.0.0.0 --port=5000"]
+```
+
+This seeds a fresh volume and leaves existing data untouched on later restarts. Never use `--reset` there, or every restart would wipe user data.
+
+> Note: `backend/library.db` may be baked into the image, but it is not used in Docker/Coolify because `DATABASE_PATH` points at the mounted volume (`/app/data/library.db`). The volume is the source of truth.
+
 ## Deployment (Coolify + Tailscale/tsdproxy)
 
 Coolify deploys the base `docker-compose.yml` as-is. The `frontend` container carries the tsdproxy labels, since nginx is the single public entrypoint:
@@ -140,12 +182,7 @@ Configuration notes:
 - **`tailscale_funnel` is optional.** Remove it to expose the app only inside the Tailnet. For public exposure, the tsdproxy Docker provider must set `allowContainerFunnel: true` in `tsdproxy.yaml`.
 - **Network:** tsdproxy must share a Docker network with the Coolify stack (e.g. `library_book_manager_default`) or be configured with `targetHostname`/`tryDockerInternalNetwork: true` so it can reach `frontend:3001`.
 - **Persistence:** SQLite lives in the `library_data` volume at `/app/data/library.db` (`DATABASE_PATH`), so it survives redeploys.
-- **Seed data:** on a fresh volume, run once inside the backend container:
-
-  ```bash
-  docker compose exec backend python seed.py
-  ```
-
+- **Seed data:** on a fresh volume, seed once inside the backend container. See [Database Seeding](#database-seeding) for Docker, Coolify, and automatic startup options.
 - **Ports:** `5000` and `3001` are published on the host for local access. If they might conflict with another service on the host, bind them to loopback (`127.0.0.1:5000:5000`) or remove the `ports` entries and reach the app only via the Tailscale hostname.
 
 ### Running Tests
