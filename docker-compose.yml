@@ -45,5 +45,5 @@ volumes:
   library_data:
 
 networks:
-  tsdproxy:
+  tsdproxy_default:
     external: true
