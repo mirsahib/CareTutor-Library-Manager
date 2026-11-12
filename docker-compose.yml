@@ -10,18 +10,31 @@ services:
     expose:
       - "5000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build: ./frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     expose:
-      - "80"
+      - "3001"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     labels:
       - tsdproxy.enable=true
       - tsdproxy.name=library
-      - "tsdproxy.port.1=443/https:80/http,tailscale_funnel"
+      - "tsdproxy.port.1=443/https:3001/http,tailscale_funnel"
 
 volumes:
   library_data:
