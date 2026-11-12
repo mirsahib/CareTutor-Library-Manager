@@ -1,19 +1,27 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
-    ports:
-      - "5000:5000"
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=development
+      - FLASK_ENV=production
+      - DATABASE_PATH=/app/data/library.db
     volumes:
-      - ./backend:/app
+      - library_data:/app/data
+    expose:
+      - "5000"
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
-    ports:
-      - "3001:80"
     depends_on:
       - backend
+    expose:
+      - "80"
+    restart: unless-stopped
+    labels:
+      - tsdproxy.enable=true
+      - tsdproxy.name=library
+      - "tsdproxy.port.1=443/https:80/http,tailscale_funnel"
+
+volumes:
+  library_data:

@@ -3,7 +3,7 @@
 
     angular.module('libraryApp')
         .service('BookService', ['$http', function ($http) {
-            var API_BASE = 'http://localhost:5000/api/books';
+            var API_BASE = '/api/books';
 
             // 1. Get all books (supports optional search and category params)
             this.getBooks = function (search, category) {
