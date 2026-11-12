@@ -1,2 +1,6 @@
 venv/
 __pycache__/
+graphify-out/
+.scratch/
+.pytest_cache/
+.vscode/
