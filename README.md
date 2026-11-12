@@ -7,7 +7,6 @@ A single-page web application enabling a librarian to manage a book repository a
 ```
 library-app/
 ├ docker-compose.yml          # Production stack (Coolify + tsdproxy)
-├ docker-compose.local.yml    # Local port overrides
 ├ backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
@@ -113,18 +112,16 @@ flask run
 
 The API will be available at `http://localhost:5000/api`
 
-### Using Docker Compose (local)
-
-The base `docker-compose.yml` only uses `expose` so it can run behind tsdproxy. To publish ports on localhost, layer the local override:
+### Using Docker Compose
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+docker compose up --build
 ```
 
 - Backend API: `http://localhost:5000/api`
 - Frontend SPA: `http://localhost:3001`
 
-The frontend calls the API through its own origin (`/api/books`), and `frontend/nginx.conf` proxies those requests to `backend:5000`. The backend is not exposed publicly.
+The frontend calls the API through its own origin (`/api/books`), and `frontend/nginx.conf` proxies those requests to `backend:5000`. The backend also publishes port `5000` for direct API access.
 
 ## Deployment (Coolify + Tailscale/tsdproxy)
 
@@ -134,14 +131,14 @@ Coolify deploys the base `docker-compose.yml` as-is. The `frontend` container ca
 labels:
   - tsdproxy.enable=true
   - tsdproxy.name=library
-  - "tsdproxy.port.1=443/https:80/http,tailscale_funnel"
+  - "tsdproxy.port.1=443/https:3001/http,tailscale_funnel"
 ```
 
 Configuration notes:
 
-- **Labels go on `frontend`**, not `backend`. tsdproxy proxies the container's internal nginx port (`80`), so no published host ports are required.
+- **Labels go on `frontend`**, not `backend`. tsdproxy proxies the container's internal nginx port (`3001`).
 - **`tailscale_funnel` is optional.** Remove it to expose the app only inside the Tailnet. For public exposure, the tsdproxy Docker provider must set `allowContainerFunnel: true` in `tsdproxy.yaml`.
-- **Network:** tsdproxy must share a Docker network with the Coolify stack (e.g. `library_book_manager_default`) or be configured with `targetHostname`/`tryDockerInternalNetwork: true` so it can reach `frontend:80`.
+- **Network:** tsdproxy must share a Docker network with the Coolify stack (e.g. `library_book_manager_default`) or be configured with `targetHostname`/`tryDockerInternalNetwork: true` so it can reach `frontend:3001`.
 - **Persistence:** SQLite lives in the `library_data` volume at `/app/data/library.db` (`DATABASE_PATH`), so it survives redeploys.
 - **Seed data:** on a fresh volume, run once inside the backend container:
 
@@ -149,7 +146,7 @@ Configuration notes:
   docker compose exec backend python seed.py
   ```
 
-- **Local access to the deployed app:** add `ports` (bound to `127.0.0.1`) to the service you need, or use the Tailscale hostname.
+- **Ports:** `5000` and `3001` are published on the host for local access. If they might conflict with another service on the host, bind them to loopback (`127.0.0.1:5000:5000`) or remove the `ports` entries and reach the app only via the Tailscale hostname.
 
 ### Running Tests
 

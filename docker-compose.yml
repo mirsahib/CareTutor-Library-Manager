@@ -7,8 +7,8 @@ services:
       - DATABASE_PATH=/app/data/library.db
     volumes:
       - library_data:/app/data
-    expose:
-      - "5000"
+    ports:
+      - "5000:5000"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/')"]
@@ -22,8 +22,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    expose:
-      - "3001"
+    ports:
+      - "3001:3001"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/"]
