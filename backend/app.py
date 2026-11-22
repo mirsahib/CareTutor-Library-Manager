@@ -5,7 +5,7 @@ from flask_cors import CORS
 from marshmallow import EXCLUDE, ValidationError
 from werkzeug.exceptions import HTTPException
 from database import get_connection, init_db
-from schema import BookSchema
+from schema import BookSchema,MemberSchema
 
 
 def format_validation_error(error):
@@ -27,11 +27,71 @@ def format_validation_error(error):
 def create_app():
     app = Flask(__name__)
     CORS(app)
+    print(f"Using database at")
     init_db()
+    app.run(debug=True)
 
     @app.route("/")
     def index():
         return jsonify({"message": "Library Book Manager API"}), 200
+    @app.route("/api/members", methods=["GET"])
+    def get_member():
+        search = (request.args.get("search") or "").strip()
+        category = (request.args.get("category") or "").strip()
+
+        clauses = []
+        params = []
+
+        if search:
+            clauses.append(
+                "(instr(lower(title), lower(?)) > 0"
+                " OR instr(lower(name), lower(?)) > 0)"
+            )
+            params.extend([search, search])
+
+        if category:
+            clauses.append("lower(category) = lower(?)")
+            params.append(category)
+
+        query = "SELECT * FROM members"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY name"
+
+        with get_connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+
+        return jsonify([dict(row) for row in rows]), 200
+
+    @app.route("/api/members", methods=["POST"])
+    def create_member():
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Request body must be a JSON object"}), 400
+
+        try:
+            member_data = cast(
+                dict[str, Any], MemberSchema(unknown=EXCLUDE).load(payload)
+            )
+        except ValidationError as error:
+            return jsonify({"error": format_validation_error(error)}), 400
+
+        with get_connection() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO books (name, phone)
+                VALUES (?, ?)
+                """,
+                (
+                    member_data["name"],
+                    member_data["phone"]
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM members WHERE id = ?", (cursor.lastrowid,)
+            ).fetchone()
+
+        return jsonify(dict(row)), 201
 
     @app.route("/api/books", methods=["GET"])
     def get_books():
@@ -162,15 +222,26 @@ def create_app():
             book = conn.execute(
                 "SELECT * FROM books WHERE id = ?", (book_id,)
             ).fetchone()
+            
+            member = conn.execute(
+                "SELECT * FROM members WHERE name = ?", (borrower_name,)
+            ).fetchone()
 
             if book is None:
                 return jsonify({"error": "Book not found"}), 404
 
             if book["is_borrowed"]:
                 return jsonify({"error": "Book is already borrowed"}), 409
+            
+            if member is None:
+                return jsonify({"error": "Member not found"}), 404
+            
+            if member["number_of_borrowed_books"] >= 3:
+                return jsonify({"error": "Member has already borrowed 3 books"}), 409
+            
 
             conn.execute(
-                "UPDATE books SET is_borrowed = 1, borrower_name = ? WHERE id = ?",
+                "UPDATE books SET is_borrowed = 1, borrower_id = ? WHERE id = ?",
                 (borrower_name, book_id),
             )
             row = conn.execute(
@@ -220,6 +291,8 @@ def create_app():
             conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
 
         return "", 204
+
+    
 
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):

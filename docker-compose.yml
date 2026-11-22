@@ -3,8 +3,9 @@ services:
     build: ./backend
     environment:
       - FLASK_APP=app.py
-      - FLASK_ENV=production
+      - FLASK_ENV=development
       - DATABASE_PATH=/app/data/library.db
+      - FLASK_DEBUG=1
     volumes:
       - library_data:/app/data
     ports:
@@ -29,7 +30,7 @@ services:
     restart: unless-stopped
     networks:
       - default
-      - tsdproxy_default
+      # - tsdproxy_default
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/"]
       interval: 30s
@@ -44,6 +45,6 @@ services:
 volumes:
   library_data:
 
-networks:
-  tsdproxy_default:
-    external: true
+# networks:
+#   # tsdproxy_default:
+#   #   external: true

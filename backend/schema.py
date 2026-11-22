@@ -16,3 +16,9 @@ class BookSchema(Schema):
     def make_book(self, data, **kwargs):
         data.setdefault("category", "Uncategorized")
         return data
+
+class MemberSchema(Schema):
+    id = fields.Integer(dump_only=True)
+    name = fields.String(required=True, validate=validate.Length(min=1))
+    phone = fields.String(required=True, validate=validate.Length(min=1))
+    number_of_borrowed_books = fields.Integer(dump_only=True)

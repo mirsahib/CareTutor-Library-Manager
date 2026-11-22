@@ -14,7 +14,14 @@ CREATE TABLE IF NOT EXISTS books (
     category TEXT NOT NULL,
     published_year INTEGER NOT NULL,
     is_borrowed BOOLEAN NOT NULL DEFAULT 0,
-    borrower_name TEXT DEFAULT NULL,
+    borrower_id INTEGER REFERENCES members(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    number_of_borrowed_books INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
@@ -36,5 +43,6 @@ def get_connection():
 
 
 def init_db():
+    print("Initializing the database...")
     with get_connection() as conn:
         conn.executescript(SCHEMA)
